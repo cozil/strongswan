@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2017 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -179,6 +179,56 @@ enumerator_t *enumerator_create_nested(enumerator_t *outer,
 enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 					bool (*filter)(void *data, ...),
 					void *data, void (*destructor)(void *data));
+
+/**
+ * Defines an enumerator that simplifies filtering/modifying the output of an
+ * other enumerator.
+ *
+ * The output ends with the signature of the outer enumerator's enumerate
+ * function (the opening { brace is already written by the macro).
+ * The context object is available under the given name. The original enumerator
+ * is available in the variable unfiltered.
+ *
+ * The actual enumerator can be created by calling
+ *   enumerator_<name>_create(unfiltered, arg1, void destructor(arg1))
+ * where unfiltered is the original enumerator, arg1 is a context object, which
+ * may be destroyed with the given destructor (may both be NULL).
+ */
+#define ENUMERATOR_FILTER(name, arg1_t, arg1_n, ...) \
+	typedef struct { \
+		enumerator_t public; \
+		arg1_t arg1_n; \
+		enumerator_t *unfiltered; \
+		void (*destructor)(arg1_t); \
+	} _##name##_enumerator; \
+	METHOD(enumerator_t, _##name##_enumerate, bool, \
+		_##name##_enumerator *_this, ...); \
+	METHOD(enumerator_t, _##name##_destroy, void, \
+		_##name##_enumerator *_this) { \
+		if (_this->destructor) { \
+			_this->destructor(_this->arg1_n); \
+		} \
+		_this->unfiltered->destroy(_this->unfiltered); \
+		free(_this); \
+	} \
+	static enumerator_t *enumerator_##name##_create(enumerator_t *unfiltered, \
+								arg1_t arg1_n, void (*destructor)(arg1_t)) { \
+		_##name##_enumerator *this; \
+		INIT(this, \
+			.public = { \
+				.enumerate = __##name##_enumerate, \
+				.destroy = __##name##_destroy, \
+			}, \
+			.arg1_n = arg1_n, \
+			.unfiltered = unfiltered, \
+			.destructor = destructor, \
+		); \
+		return &this->public; \
+	} \
+	static bool _##name##_enumerate(_##name##_enumerator *_this, ...) { \
+		arg1_t arg1_n = _this->arg1_n; \
+		enumerator_t *unfiltered = _this->unfiltered; \
+		VA_ARGS_GET(_this, __VA_ARGS__);
 
 /**
  * Create an enumerator wrapper which does a cleanup on destroy.
