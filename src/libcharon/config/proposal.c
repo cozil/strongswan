@@ -94,35 +94,36 @@ METHOD(proposal_t, add_algorithm, void,
 	array_insert(this->transforms, ARRAY_TAIL, &entry);
 }
 
-/**
- * filter function for peer configs
- */
-static bool alg_filter(uintptr_t type, entry_t **in, uint16_t *alg,
-					   void **unused, uint16_t *key_size)
-{
-	entry_t *entry = *in;
+ENUMERATOR_FILTER(alg_filter_test, uint16_t, type, uint16_t*, alg,
+				  uint16_t*, key_size)
 
-	if (entry->type != type)
+	entry_t *entry;
+
+	while (unfiltered->enumerate(unfiltered, &entry))
 	{
-		return FALSE;
+		if (entry->type != type)
+		{
+			continue;
+		}
+		if (alg)
+		{
+			*alg = entry->alg;
+		}
+		if (key_size)
+		{
+			*key_size = entry->key_size;
+		}
+		return TRUE;
 	}
-	if (alg)
-	{
-		*alg = entry->alg;
-	}
-	if (key_size)
-	{
-		*key_size = entry->key_size;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(proposal_t, create_enumerator, enumerator_t*,
 	private_proposal_t *this, transform_type_t type)
 {
-	return enumerator_create_filter(
+	return enumerator_alg_filter_test_create(
 						array_create_enumerator(this->transforms),
-						(void*)alg_filter, (void*)(uintptr_t)type, NULL);
+						type, NULL);
 }
 
 METHOD(proposal_t, get_algorithm, bool,
