@@ -31,22 +31,38 @@
 
 #include <utils/debug.h>
 
-/**
- * Implementation of enumerator_create_empty().enumerate
+/*
+ * Described in header.
  */
-static bool enumerate_empty(enumerator_t *enumerator, ...)
+bool enumerator_enumerate_default(enumerator_t *enumerator, ...)
+{
+	va_list list;
+	bool result;
+
+	va_start(list, enumerator);
+	result = enumerator->venumerate(enumerator, list);
+	va_end(list);
+	return result;
+}
+
+METHOD(enumerator_t, enumerate_empty, bool,
+	enumerator_t *enumerator, va_list list)
 {
 	return FALSE;
 }
 
-/**
+/*
  * See header
  */
 enumerator_t* enumerator_create_empty()
 {
-	enumerator_t *this = malloc_thing(enumerator_t);
-	this->enumerate = enumerate_empty;
-	this->destroy = (void*)free;
+	enumerator_t *this;
+
+	INIT(this,
+		.enumerate = enumerator_enumerate_default,
+		.venumerate = _enumerate_empty,
+		.destroy = (void*)free,
+	);
 	return this;
 }
 
@@ -588,52 +604,6 @@ enumerator_t *enumerator_create_filter_new(enumerator_t *unfiltered,
 }
 
 /**
- * enumerator for cleaner enumerator
- */
-typedef struct {
-	enumerator_t public;
-	enumerator_t *wrapped;
-	void (*cleanup)(void *data);
-	void *data;
-} cleaner_enumerator_t;
-
-/**
- * Implementation of enumerator_create_cleanup().destroy
- */
-static void destroy_cleaner(cleaner_enumerator_t *this)
-{
-	this->cleanup(this->data);
-	this->wrapped->destroy(this->wrapped);
-	free(this);
-}
-
-/**
- * Implementation of enumerator_create_cleaner().enumerate
- */
-static bool enumerate_cleaner(cleaner_enumerator_t *this, void *v1, void *v2,
-							  void *v3, void *v4, void *v5)
-{
-	return this->wrapped->enumerate(this->wrapped, v1, v2, v3, v4, v5);
-}
-
-/**
- * see header
- */
-enumerator_t *enumerator_create_cleaner(enumerator_t *wrapped,
-										void (*cleanup)(void *data), void *data)
-{
-	cleaner_enumerator_t *this = malloc_thing(cleaner_enumerator_t);
-
-	this->public.enumerate = (void*)enumerate_cleaner;
-	this->public.destroy = (void*)destroy_cleaner;
-	this->wrapped = wrapped;
-	this->cleanup = cleanup;
-	this->data = data;
-
-	return &this->public;
-}
-
-/**
  * enumerator for single enumerator
  */
 typedef struct {
@@ -685,3 +655,52 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item))
 	return &this->public;
 }
 
+/**
+ * Enumerator for cleaner enumerator
+ */
+typedef struct {
+	enumerator_t public;
+	enumerator_t *wrapped;
+	void (*cleanup)(void *data);
+	void *data;
+} cleaner_enumerator_t;
+
+METHOD(enumerator_t, destroy_cleaner, void,
+	cleaner_enumerator_t *this)
+{
+	this->cleanup(this->data);
+	this->wrapped->destroy(this->wrapped);
+	free(this);
+}
+
+METHOD(enumerator_t, enumerate_cleaner, bool,
+	cleaner_enumerator_t *this, va_list list)
+{
+	if (!this->wrapped->venumerate)
+	{
+		DBG1(DBG_LIB, "!!! CLEANER ENUMERATOR: venumerate() missing !!!");
+		return FALSE;
+	}
+	return this->wrapped->venumerate(this->wrapped, list);
+}
+
+/*
+ * Described in header
+ */
+enumerator_t *enumerator_create_cleaner(enumerator_t *wrapped,
+										void (*cleanup)(void *data), void *data)
+{
+	cleaner_enumerator_t *this;
+
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_cleaner,
+			.destroy = _destroy_cleaner,
+		},
+		.wrapped = wrapped,
+		.cleanup = cleanup,
+		.data = data,
+	);
+	return &this->public;
+}

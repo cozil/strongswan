@@ -34,8 +34,12 @@ struct enumerator_t {
 	/**
 	 * Enumerate collection.
 	 *
-	 * The enumerate function takes a variable argument list containing
+	 * The enumerate method takes a variable argument list containing
 	 * pointers where the enumerated values get written.
+	 *
+	 * @note Since venumerate() has to be imlemented just assigning the generic
+	 * enumerator_enumerate_default() function that calls venumerate() is
+	 * enough.
 	 *
 	 * @param ...	variable list of enumerated items, implementation dependent
 	 * @return		TRUE if pointers returned
@@ -43,10 +47,30 @@ struct enumerator_t {
 	bool (*enumerate)(enumerator_t *this, ...);
 
 	/**
+	 * Enumerate collection.
+	 *
+	 * The venumerate function takes a variable argument list containing
+	 * pointers where the enumerated values get written.
+	 *
+	 * @param list	variable list of enumerated items, implementation dependent
+	 * @return		TRUE if pointers returned
+	 */
+	bool (*venumerate)(enumerator_t *this, va_list list);
+
+	/**
 	 * Destroy a enumerator instance.
 	 */
 	void (*destroy)(enumerator_t *this);
 };
+
+/**
+ * Generic implementation of enumerator_t::enumerate() that simply calls
+ * the enumerator's venumerate() implementation.
+ *
+ * @param enumerator	the enumerator
+ * @param ...			arguments passed to enumerate()
+ */
+bool enumerator_enumerate_default(enumerator_t *enumerator, ...);
 
 /**
  * Create an enumerator which enumerates over nothing
