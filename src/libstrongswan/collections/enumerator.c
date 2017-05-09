@@ -549,6 +549,44 @@ enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 	return &this->public;
 }
 
+
+/**
+ * Implementation of enumerator_create_filter().enumerate
+ */
+METHOD(enumerator_t, enumerate_filter_new, bool,
+	filter_enumerator_t *this, ...)
+{
+	va_list list;
+	bool result = FALSE;
+
+	va_start(list, this);
+	if (this->filter(this->data, this->unfiltered, list))
+	{
+		result = TRUE;
+	}
+	va_end(list);
+	return result;
+}
+
+/**
+ * see header
+ */
+enumerator_t *enumerator_create_filter_new(enumerator_t *unfiltered,
+			bool (*filter)(void *data, enumerator_t *unfiltered, va_list list),
+			void *data, void (*destructor)(void *data))
+{
+	filter_enumerator_t *this = malloc_thing(filter_enumerator_t);
+
+	this->public.enumerate = _enumerate_filter_new;
+	this->public.destroy = (void*)destroy_filter;
+	this->unfiltered = unfiltered;
+	this->filter = (void*)filter;
+	this->data = data;
+	this->destructor = destructor;
+
+	return &this->public;
+}
+
 /**
  * enumerator for cleaner enumerator
  */

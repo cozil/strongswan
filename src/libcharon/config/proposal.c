@@ -118,9 +118,39 @@ ENUMERATOR_FILTER(alg_filter_test, uint16_t, type, uint16_t*, alg,
 	return FALSE;
 }
 
+
+CALLBACK(alg_filter_new, bool,
+	uintptr_t type, enumerator_t *unfiltered, va_list list)
+{
+	entry_t *entry;
+
+	VA_ARGS_VGET(list, uint16_t*, alg, uint16_t*, key_size);
+
+	while (unfiltered->enumerate(unfiltered, &entry))
+	{
+		if (entry->type != type)
+		{
+			continue;
+		}
+		if (alg)
+		{
+			*alg = entry->alg;
+		}
+		if (key_size)
+		{
+			*key_size = entry->key_size;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(proposal_t, create_enumerator, enumerator_t*,
 	private_proposal_t *this, transform_type_t type)
 {
+	return enumerator_create_filter_new(
+						array_create_enumerator(this->transforms),
+						alg_filter_new, (void*)(uintptr_t)type, NULL);
 	return enumerator_alg_filter_test_create(
 						array_create_enumerator(this->transforms),
 						type, NULL);

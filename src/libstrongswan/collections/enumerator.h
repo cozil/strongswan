@@ -181,6 +181,26 @@ enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 					void *data, void (*destructor)(void *data));
 
 /**
+ * Creates an enumerator which filters output of another enumerator.
+ *
+ * The filter function receives the user supplied "data" followed by the
+ * unfiltered enumerator, followed by the arguments passed to the outer
+ * enumerator.  It returns TRUE to deliver the values assigned to these
+ * arguments to the caller of enumerate(), FALSE to end the enumeration.
+ * Actually filtering items is simple as the filter function may just skip
+ * enumerated items from the unfiltered enumerator.
+ *
+ * @param unfiltered			unfiltered enumerator to wrap, gets destroyed
+ * @param filter				filter function
+ * @param data					user data to supply to filter
+ * @param destructor			destructor function to clean up data after use
+ * @return						the filtered enumerator
+ */
+enumerator_t *enumerator_create_filter_new(enumerator_t *unfiltered,
+			bool (*filter)(void *data, enumerator_t *unfiltered, va_list list),
+			void *data, void (*destructor)(void *data));
+
+/**
  * Defines an enumerator that simplifies filtering/modifying the output of an
  * other enumerator.
  *
