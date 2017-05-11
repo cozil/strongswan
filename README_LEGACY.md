@@ -10,6 +10,9 @@ consult the man pages and [**our wiki**](http://wiki.strongswan.org).
 
 ## Quickstart ##
 
+In the following examples we assume, for reasons of clarity, that **left**
+designates the **local** host and that **right** is the **remote** host.
+
 Certificates for users, hosts and gateways are issued by a fictitious
 strongSwan CA.  How to generate private keys and certificates using OpenSSL or
 the strongSwan PKI tool will be explained in one of the sections below.
@@ -28,63 +31,43 @@ set up between the two gateways:
 
 Configuration on gateway _moon_:
 
-    /etc/swanctl/x509ca/strongswanCert.pem
-    /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/rsa/moonKey.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-    /etc/swanctl/swanctl.conf:
+    /etc/ipsec.d/certs/moonCert.pem
 
-        connections {
-            net-net {
-                remote_addrs = 192.168.0.2
+    /etc/ipsec.secrets:
 
-                local {
-                    auth=pubkey
-                    certs = moonCert.pem
-                }
-                remote {
-                    auth=pubkey
-                    id = "C=CH, O=strongSwan Project, CN=sun.strongswan.org"
-                }
-                children {
-                    net-net {
-                        local_ts  = 10.1.0.0/16
-                        remote_ts = 10.2.0.0/16
-                        start_action = start
-                   }
-                }
-            }
-        }
+        : RSA moonKey.pem "<optional passphrase>"
+
+    /etc/ipsec.conf:
+
+        conn net-net
+            leftsubnet=10.1.0.0/16
+            leftcert=moonCert.pem
+            right=192.168.0.2
+            rightsubnet=10.2.0.0/16
+            rightid="C=CH, O=strongSwan, CN=sun.strongswan.org"
+            auto=start
 
 Configuration on gateway _sun_:
 
-    /etc/swanctl/x509ca/strongswanCert.pem
-    /etc/swanctl/x509/sunCert.pem
-    /etc/swanctl/rsa/sunKey.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-    /etc/swanctl/swanctl.conf:
+    /etc/ipsec.d/certs/sunCert.pem
 
-        connections {
-            net-net {
-                remote_addrs = 192.168.0.1
+    /etc/ipsec.secrets:
 
-                local {
-                    auth=pubkey
-                    certs = sunCert.pem
-                }
-                remote {
-                    auth=pubkey
-                    id = "C=CH, O=strongSwan Project, CN=moon.strongswan.org"
-                }
-                children {
-                    net-net {
-                        local_ts  = 10.2.0.0/16
-                        remote_ts = 10.1.0.0/16
-                        start_action = start
-                   }
-                }
-            }
-        }
+        : RSA sunKey.pem "<optional passphrase>"
+
+    /etc/ipsec.conf:
+
+        conn net-net
+            leftsubnet=10.2.0.0/16
+            leftcert=sunCert.pem
+            right=192.168.0.1
+            rightsubnet=10.1.0.0/16
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
 ### Host-to-host case ###
@@ -96,61 +79,41 @@ connections we will use the default IPsec tunnel mode.
     | 192.168.0.1 | === | 192.168.0.2 |
          moon                sun
 
- Configuration on host _moon_:
+Configuration on host _moon_:
 
-    /etc/swanctl/x509ca/strongswanCert.pem
-    /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/rsa/moonKey.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-    /etc/swanctl/swanctl.conf:
+    /etc/ipsec.d/certs/moonCert.pem
 
-        connections {
-            host-host {
-                remote_addrs = 192.168.0.2
+    /etc/ipsec.secrets:
 
-                local {
-                    auth=pubkey
-                    certs = moonCert.pem
-                }
-                remote {
-                    auth=pubkey
-                    id = "C=CH, O=strongSwan Project, CN=sun.strongswan.org"
-                }
-                children {
-                    net-net {
-                        start_action = start
-                    }
-                }
-            }
-        }
+        : RSA moonKey.pem "<optional passphrase>"
+
+    /etc/ipsec.conf:
+
+        conn host-host
+            leftcert=moonCert.pem
+            right=192.168.0.2
+            rightid="C=CH, O=strongSwan, CN=sun.strongswan.org"
+            auto=start
 
 Configuration on host _sun_:
 
-    /etc/swanctl/x509ca/strongswanCert.pem
-    /etc/swanctl/x509/sunCert.pem
-    /etc/swanctl/rsa/sunKey.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-    /etc/swanctl/swanctl.conf:
+    /etc/ipsec.d/certs/sunCert.pem
 
-        connections {
-            host-host {
-                remote_addrs = 192.168.0.1
+    /etc/ipsec.secrets:
 
-                local {
-                    auth=pubkey
-                    certs = sunCert.pem
-                }
-                remote {
-                    auth=pubkey
-                    id = "C=CH, O=strongSwan Project, CN=moon.strongswan.org"
-                }
-                children {
-                    host-host {
-                        start_action = start
-                   }
-                }
-            }
-        }
+        : RSA sunKey.pem "<optional passphrase>"
+
+    /etc/ipsec.conf:
+
+        conn host-host
+            leftcert=sunCert.pem
+            right=192.168.0.1
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
 ### Roadwarrior case ###
@@ -163,57 +126,40 @@ number of remote VPN clients usually having dynamic IP addresses.
 
 Configuration on gateway _moon_:
 
-    /etc/swanctl/x509ca/strongswanCert.pem
-    /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/rsa/moonKey.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-    /etc/swanctl/swanctl.conf:
+    /etc/ipsec.d/certs/moonCert.pem
 
-        connections {
-            rw {
-                local {
-                    auth=pubkey
-                    certs = moonCert.pem
-                }
-                remote {
-                    auth=pubkey
-                }
-                children {
-                    net-net {
-                        local_ts  = 10.1.0.0/16
-                    }
-                }
-            }
-        }
+    /etc/ipsec.secrets:
+
+        : RSA moonKey.pem "<optional passphrase>"
+
+    /etc/ipsec.conf:
+
+        conn rw
+            leftsubnet=10.1.0.0/16
+            leftcert=moonCert.pem
+            right=%any
+            auto=add
 
 Configuration on roadwarrior _carol_:
 
-    /etc/swanctl/x509ca/strongswanCert.pem
-    /etc/swanctl/x509/carolCert.pem
-    /etc/swanctl/rsa/carolKey.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-    /etc/swanctl/swanctl.conf:
+    /etc/ipsec.d/certs/carolCert.pem
 
-         connections {
-            home {
-                remote_addrs = 192.168.0.1
+    /etc/ipsec.secrets:
 
-                local {
-                    auth=pubkey
-                    certs = carolCert.pem
-                }
-                remote {
-                    auth=pubkey
-                    id = "C=CH, O=strongSwan Project, CN=moon.strongswan.org"
-                }
-                children {
-                    home {
-                        local_ts  = 10.1.0.0/16
-                        start_action = start
-                    }
-                }
-            }
-        }
+        : RSA carolKey.pem "<optional passphrase>"
+
+    /etc/ipsec.conf:
+
+        conn home
+            leftcert=carolCert.pem
+            right=192.168.0.1
+            rightsubnet=10.1.0.0/16
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
 ### Roadwarrior case with virtual IP ###
